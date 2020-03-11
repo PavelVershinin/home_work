@@ -26,22 +26,23 @@ func Unpack(s string) (string, error) {
 
 		if symbol == backslash {
 			if escaped, err := RuneEscaped(src, i); err != nil {
-				return "", err
+				return "", ErrInvalidString
 			} else if !escaped {
 				continue
 			}
 		}
 
 		if unicode.IsDigit(symbol) {
-			if escaped, err := RuneEscaped(src, i); err != nil {
-				return "", err
-			} else if !escaped {
+			if escaped, err := RuneEscaped(src, i); err != nil || !escaped {
 				return "", ErrInvalidString
 			}
 		}
 
 		if i+1 < len(src) && unicode.IsDigit(src[i+1]) {
-			count, _ = strconv.Atoi(string(src[i+1]))
+			var err error
+			if count, err = strconv.Atoi(string(src[i+1])); err != nil {
+				return "", ErrInvalidString
+			}
 			i++
 		}
 
