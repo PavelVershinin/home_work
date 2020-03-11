@@ -1,6 +1,7 @@
 package hw02_unpack_string //nolint:golint,stylecheck
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -44,8 +45,6 @@ func TestUnpack(t *testing.T) {
 }
 
 func TestUnpackWithEscape(t *testing.T) {
-	t.Skip() // Remove if task with asterisk completed
-
 	for _, tst := range [...]test{
 		{
 			input:    `qwe\4\5`,
@@ -67,5 +66,65 @@ func TestUnpackWithEscape(t *testing.T) {
 		result, err := Unpack(tst.input)
 		require.Equal(t, tst.err, err)
 		require.Equal(t, tst.expected, result)
+	}
+}
+
+func TestRuneEscaped(t *testing.T) {
+	var testTable = []struct {
+		input    []rune
+		position int
+		expected bool
+		err      error
+	}{
+		{
+			input:    []rune(`Test 符号 1 \`),
+			position: 0,
+			expected: false,
+			err:      nil,
+		},
+		{
+			input:    []rune(`Test 符号 1 \`),
+			position: -1,
+			expected: false,
+			err:      ErrorOutOfRange,
+		},
+		{
+			input:    []rune(`Test 符号 1 \`),
+			position: 10,
+			expected: false,
+			err:      nil,
+		},
+		{
+			input:    []rune(`Test 符号 1 \`),
+			position: 11,
+			expected: false,
+			err:      ErrorOutOfRange,
+		},
+		{
+			input:    []rune(`Test 符\号 1 \`),
+			position: 7,
+			expected: true,
+			err:      nil,
+		},
+		{
+			input:    []rune(`Test 符\\号 1 \`),
+			position: 8,
+			expected: false,
+			err:      nil,
+		},
+		{
+			input:    []rune(`Test 符\\号 1 \`),
+			position: 7,
+			expected: true,
+			err:      nil,
+		},
+	}
+
+	for i, tst := range testTable {
+		t.Run(fmt.Sprintf("test #%d", i), func(t *testing.T) {
+			result, err := RuneEscaped(tst.input, tst.position)
+			require.Equal(t, tst.err, err)
+			require.Equal(t, tst.expected, result)
+		})
 	}
 }
