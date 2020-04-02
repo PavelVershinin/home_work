@@ -74,6 +74,11 @@ func (l *list) PushFront(v interface{}) *listItem {
 		p.Prev = l.first
 	}
 
+	// Если в списке ещё нет крайнего элемента, то первый и будет крайним
+	if l.last == nil {
+		l.last = item
+	}
+
 	l.ptrs[unsafe.Pointer(item)] = struct{}{}
 
 	l.mu.Unlock()

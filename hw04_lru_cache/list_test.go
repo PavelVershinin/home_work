@@ -76,4 +76,11 @@ func TestList(t *testing.T) {
 		require.False(t, l1.Exists(li2))
 		require.False(t, l2.Exists(li1))
 	})
+
+	t.Run("last", func(t *testing.T) {
+		l := NewList()
+		l.PushFront(0)
+		l.PushFront(1)
+		require.Equal(t, l.Back().Value, 0)
+	})
 }
