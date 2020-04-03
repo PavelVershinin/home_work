@@ -27,8 +27,8 @@ func (c *Counter) Count() int {
 	return cnt
 }
 
-// SortedList Вернёт список слов, отсортированный по частотности от большего к меньшему
-func (c *Counter) SortedList(topNumber int) []string {
+// MostCommon Вернёт список слов, отсортированный по частотности от большего к меньшему
+func (c *Counter) MostCommon(topNumber int) []string {
 	c.mu.Lock()
 	list := make([]string, 0, len(c.words))
 	for w := range c.words {

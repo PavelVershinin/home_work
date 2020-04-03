@@ -8,5 +8,5 @@ func Top10(s string) []string {
 
 	counter.AddText(s)
 
-	return counter.SortedList(topNumber)
+	return counter.MostCommon(topNumber)
 }

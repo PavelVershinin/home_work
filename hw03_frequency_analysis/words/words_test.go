@@ -36,7 +36,7 @@ func TestCounter(t *testing.T) {
 			var counter = &words.Counter{}
 			counter.AddText(ts.Text)
 			require.Equal(t, ts.ExpectedCount, counter.Count())
-			require.Subset(t, ts.ExpectedList, counter.SortedList(3))
+			require.Subset(t, ts.ExpectedList, counter.MostCommon(3))
 		})
 	}
 }
@@ -59,7 +59,7 @@ func TestCounter_AddWord(t *testing.T) {
 		t.Run(strconv.Itoa(i), func(t *testing.T) {
 			var counter = &words.Counter{}
 			require.Equal(t, ts.ExpectedError, counter.AddWord(ts.Word))
-			require.Equal(t, ts.ExpectedList, counter.SortedList(-1))
+			require.Equal(t, ts.ExpectedList, counter.MostCommon(-1))
 		})
 	}
 }
