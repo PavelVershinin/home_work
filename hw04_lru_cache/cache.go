@@ -36,6 +36,7 @@ func (c *lruCache) Set(key Key, value interface{}) bool {
 			key:   key,
 			value: value,
 		})
+		c.unnecessaryRemove()
 	} else {
 		item.Value = cacheItem{
 			key:   key,
@@ -44,15 +45,6 @@ func (c *lruCache) Set(key Key, value interface{}) bool {
 		c.queue.MoveToFront(item)
 	}
 	c.items[key] = item
-
-	if !ok {
-		// Грохнем элемент вышедший за пределы capacity, если такой есть
-		for c.queue.Len() > c.capacity {
-			i := c.queue.Back()
-			c.queue.Remove(i)
-			delete(c.items, i.Value.(cacheItem).key)
-		}
-	}
 
 	return ok
 }
@@ -63,11 +55,10 @@ func (c *lruCache) Get(key Key) (interface{}, bool) {
 	defer c.mu.Unlock()
 
 	item, ok := c.items[key]
-	if ok {
-		c.queue.MoveToFront(item)
-	} else {
-		return nil, ok
+	if !ok {
+		return nil, false
 	}
+	c.queue.MoveToFront(item)
 
 	return item.Value.(cacheItem).value, ok
 }
@@ -79,6 +70,14 @@ func (c *lruCache) Clear() {
 
 	c.items = make(map[Key]*listItem)
 	c.queue = NewList()
+}
+
+func (c *lruCache) unnecessaryRemove() {
+	for c.queue.Len() > c.capacity {
+		i := c.queue.Back()
+		c.queue.Remove(i)
+		delete(c.items, i.Value.(cacheItem).key)
+	}
 }
 
 // NewCache Создаст новый кеш
