@@ -21,7 +21,6 @@ type lruCache struct {
 }
 
 type cacheItem struct {
-	*listItem
 	value interface{}
 }
 
@@ -29,21 +28,21 @@ type cacheItem struct {
 func (c *lruCache) Set(key Key, value interface{}) bool {
 	c.mu.Lock()
 
-	item, ok := c.items[key]
+	_, ok := c.items[key]
+	c.items[key] = cacheItem{value: value}
+
+	// Добавим ключ в начало списка,
+	// если элемент уже есть в списке, он будет перемещён в начало, потому что список теперь уникальный
+	c.queue.PushFront(key)
 
 	if !ok {
-		if c.queue.Len() == c.capacity {
-			last := c.queue.Back()            // Находим крайний элемент списка
-			c.queue.Remove(last)              // Удаляем его из очереди
-			delete(c.items, last.Value.(Key)) // Удаляем его из мапки
+		// Грохнем элемент вышедший за пределы capacity, если такой есть
+		for c.queue.Len() > c.capacity {
+			i := c.queue.Back()
+			c.queue.Remove(i)
+			delete(c.items, i.Value.(Key))
 		}
-		item.listItem = c.queue.PushFront(key)
-	} else {
-		c.queue.MoveToFront(item.listItem)
 	}
-
-	item.value = value
-	c.items[key] = item
 
 	c.mu.Unlock()
 
@@ -56,7 +55,7 @@ func (c *lruCache) Get(key Key) (interface{}, bool) {
 
 	item, ok := c.items[key]
 	if ok {
-		c.queue.MoveToFront(item.listItem)
+		c.queue.PushFront(key)
 	}
 
 	c.mu.Unlock()

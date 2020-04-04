@@ -1,10 +1,5 @@
 package hw04_lru_cache //nolint:golint,stylecheck
 
-import (
-	"sync"
-	"unsafe"
-)
-
 // List Интерфейс двухсвязного списка
 type List interface {
 	Len() int                          // длина списка
@@ -15,7 +10,7 @@ type List interface {
 	Remove(i *listItem)                // удалить элемент
 	MoveToFront(i *listItem)           // переместить элемент в начало
 	Fetch() <-chan *listItem
-	Exists(i *listItem) bool
+	Find(v interface{}) *listItem
 }
 
 type listItem struct {
@@ -25,129 +20,120 @@ type listItem struct {
 }
 
 type list struct {
-	mu    sync.Mutex
-	first *listItem
-	last  *listItem
-	ptrs  map[unsafe.Pointer]struct{}
+	front    *listItem
+	back     *listItem
+	fastList map[interface{}]*listItem
 }
 
 // Len Вернёт длину списка
 func (l *list) Len() int {
-	l.mu.Lock()
-	length := len(l.ptrs)
-	l.mu.Unlock()
-	return length
+	return len(l.fastList)
 }
 
 // Front Вернёт первый элемент списка
 func (l *list) Front() *listItem {
-	l.mu.Lock()
-	first := l.first
-	l.mu.Unlock()
-	return first
+	return l.front
 }
 
 // Back Вернёт крайний элемент списка, или первый, если в списке один элемент
 func (l *list) Back() *listItem {
-	l.mu.Lock()
-	var last *listItem
-	if l.last != nil {
-		last = l.last
-	} else {
-		last = l.first
-	}
-	l.mu.Unlock()
-	return last
+	return l.back
 }
 
 // PushFront Добавит значение в начало списка
 func (l *list) PushFront(v interface{}) *listItem {
-	l.mu.Lock()
-	item := &listItem{
+	if i := l.Find(v); i != nil {
+		l.Remove(i)
+	}
+
+	i := &listItem{
 		Value: v,
 	}
 
-	p := l.first
-	l.first = item
-	item.Next = p
-	if p != nil {
-		p.Prev = l.first
+	// nil <- (next) front <-> ... <-> elem <-> ... <-> back (prev) -> nil
+	t := l.front
+
+	i.Next = nil
+	i.Prev = t
+
+	if t != nil {
+		t.Next = i
 	}
 
-	// Если в списке ещё нет крайнего элемента, то первый и будет крайним
-	if l.last == nil {
-		l.last = item
+	l.front = i
+
+	l.fastList[v] = i
+
+	if len(l.fastList) == 1 {
+		l.back = l.front
 	}
 
-	l.ptrs[unsafe.Pointer(item)] = struct{}{}
-
-	l.mu.Unlock()
-
-	return item
+	return i
 }
 
 // PushBack Добавит значение в конец списка
 func (l *list) PushBack(v interface{}) *listItem {
-	l.mu.Lock()
-	item := &listItem{
+	if i := l.Find(v); i != nil {
+		l.Remove(i)
+	}
+
+	i := &listItem{
 		Value: v,
 	}
 
-	var p *listItem
-	switch {
-	case l.last != nil:
-		p = l.last
-	case l.first != nil:
-		p = l.first
-	default:
-		l.mu.Unlock()
-		return l.PushFront(v)
+	// nil <- (next) front <-> ... <-> elem <-> ... <-> back (prev) -> nil
+	t := l.back
+
+	i.Prev = nil
+	i.Next = t
+
+	if t != nil {
+		t.Prev = i
 	}
 
-	l.last = item
-	item.Prev = p
-	p.Next = l.last
+	l.back = i
 
-	l.ptrs[unsafe.Pointer(item)] = struct{}{}
+	l.fastList[v] = i
 
-	l.mu.Unlock()
+	if len(l.fastList) == 1 {
+		l.front = l.back
+	}
 
-	return item
+	return i
 }
 
 // Remove Удалит элемент из списка
 func (l *list) Remove(i *listItem) {
-	if i == nil || !l.Exists(i) {
+	if i == nil {
 		return
 	}
 
-	l.mu.Lock()
+	// nil <- (next) front <-> ... <-> elem <-> ... <-> back (prev) -> nil
+	prev := i.Prev
+	next := i.Next
 
-	if i.Prev != nil {
-		i.Prev.Next = i.Next
+	if next != nil {
+		next.Prev = prev
 	}
-	if i.Next != nil {
-		i.Next.Prev = i.Prev
+	if prev != nil {
+		prev.Next = next
 	}
 
 	switch {
-	case i == l.first:
-		l.first = i.Next
-	case i == l.last:
-		l.last = i.Prev
+	case i == l.back:
+		l.back = i.Next
+	case i == l.front:
+		l.front = i.Prev
 	}
 
-	delete(l.ptrs, unsafe.Pointer(i))
-
-	l.mu.Unlock()
+	delete(l.fastList, i.Value)
 }
 
 // Переместит элемент в начало списка
 func (l *list) MoveToFront(i *listItem) {
-	if i == nil || !l.Exists(i) {
+	if i == nil {
 		return
 	}
-	l.Remove(i)
 	l.PushFront(i.Value)
 }
 
@@ -157,28 +143,25 @@ func (l *list) Fetch() <-chan *listItem {
 	var c = make(chan *listItem)
 
 	go func() {
-		if l.first != nil {
-			for i := l.first; i != nil; i = i.Next {
+		defer close(c)
+		if l.back != nil {
+			for i := l.Back(); i != nil; i = i.Next {
 				c <- i
 			}
 		}
-		close(c)
 	}()
 
 	return c
 }
 
-// Exists Вернёт true, если элемент принадлежит этому списку
-func (l *list) Exists(i *listItem) bool {
-	l.mu.Lock()
-	_, ok := l.ptrs[unsafe.Pointer(i)]
-	l.mu.Unlock()
-	return ok
+// Найдет элемент в списке по значению
+func (l *list) Find(v interface{}) *listItem {
+	return l.fastList[v]
 }
 
 // NewList Создаст новый список
 func NewList() List {
 	return &list{
-		ptrs: make(map[unsafe.Pointer]struct{}),
+		fastList: map[interface{}]*listItem{},
 	}
 }
