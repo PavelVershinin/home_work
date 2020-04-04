@@ -10,7 +10,6 @@ type List interface {
 	Remove(i *listItem)                // удалить элемент
 	MoveToFront(i *listItem)           // переместить элемент в начало
 	Fetch() <-chan *listItem
-	Find(v interface{}) *listItem
 }
 
 type listItem struct {
@@ -20,14 +19,14 @@ type listItem struct {
 }
 
 type list struct {
-	front    *listItem
-	back     *listItem
-	fastList map[interface{}]*listItem
+	front  *listItem
+	back   *listItem
+	length int
 }
 
 // Len Вернёт длину списка
 func (l *list) Len() int {
-	return len(l.fastList)
+	return l.length
 }
 
 // Front Вернёт первый элемент списка
@@ -42,10 +41,6 @@ func (l *list) Back() *listItem {
 
 // PushFront Добавит значение в начало списка
 func (l *list) PushFront(v interface{}) *listItem {
-	if i := l.Find(v); i != nil {
-		l.Remove(i)
-	}
-
 	i := &listItem{
 		Value: v,
 	}
@@ -62,9 +57,9 @@ func (l *list) PushFront(v interface{}) *listItem {
 
 	l.front = i
 
-	l.fastList[v] = i
+	l.length++
 
-	if len(l.fastList) == 1 {
+	if l.length == 1 {
 		l.back = l.front
 	}
 
@@ -73,10 +68,6 @@ func (l *list) PushFront(v interface{}) *listItem {
 
 // PushBack Добавит значение в конец списка
 func (l *list) PushBack(v interface{}) *listItem {
-	if i := l.Find(v); i != nil {
-		l.Remove(i)
-	}
-
 	i := &listItem{
 		Value: v,
 	}
@@ -93,9 +84,9 @@ func (l *list) PushBack(v interface{}) *listItem {
 
 	l.back = i
 
-	l.fastList[v] = i
+	l.length++
 
-	if len(l.fastList) == 1 {
+	if l.length == 1 {
 		l.front = l.back
 	}
 
@@ -126,7 +117,7 @@ func (l *list) Remove(i *listItem) {
 		l.front = i.Prev
 	}
 
-	delete(l.fastList, i.Value)
+	l.length--
 }
 
 // Переместит элемент в начало списка
@@ -134,6 +125,7 @@ func (l *list) MoveToFront(i *listItem) {
 	if i == nil {
 		return
 	}
+	l.Remove(i)
 	l.PushFront(i.Value)
 }
 
@@ -154,14 +146,7 @@ func (l *list) Fetch() <-chan *listItem {
 	return c
 }
 
-// Найдет элемент в списке по значению
-func (l *list) Find(v interface{}) *listItem {
-	return l.fastList[v]
-}
-
 // NewList Создаст новый список
 func NewList() List {
-	return &list{
-		fastList: map[interface{}]*listItem{},
-	}
+	return &list{}
 }
