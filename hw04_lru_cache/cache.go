@@ -16,36 +16,35 @@ type Cache interface {
 type lruCache struct {
 	mu       sync.Mutex
 	capacity int
-	items    map[Key]cacheItem
+	items    map[Key]*listItem
 	queue    List
 }
 
 type cacheItem struct {
-	*listItem
+	key   Key
 	value interface{}
 }
 
 // Set Добавит значение в кеш, если оно там было обновит и вернёт true
 func (c *lruCache) Set(key Key, value interface{}) bool {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	item, ok := c.items[key]
-
 	if !ok {
-		if c.queue.Len() == c.capacity {
-			last := c.queue.Back()            // Находим крайний элемент списка
-			c.queue.Remove(last)              // Удаляем его из очереди
-			delete(c.items, last.Value.(Key)) // Удаляем его из мапки
-		}
-		item.listItem = c.queue.PushFront(key)
+		item = c.queue.PushFront(cacheItem{
+			key:   key,
+			value: value,
+		})
+		c.unnecessaryRemove()
 	} else {
-		c.queue.MoveToFront(item.listItem)
+		item.Value = cacheItem{
+			key:   key,
+			value: value,
+		}
+		c.queue.MoveToFront(item)
 	}
-
-	item.value = value
 	c.items[key] = item
-
-	c.mu.Unlock()
 
 	return ok
 }
@@ -53,30 +52,39 @@ func (c *lruCache) Set(key Key, value interface{}) bool {
 // Get Вернёт значение из кеша по ключу
 func (c *lruCache) Get(key Key) (interface{}, bool) {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 
 	item, ok := c.items[key]
-	if ok {
-		c.queue.MoveToFront(item.listItem)
+	if !ok {
+		return nil, false
 	}
+	c.queue.MoveToFront(item)
 
-	c.mu.Unlock()
-
-	return item.value, ok
+	return item.Value.(cacheItem).value, ok
 }
 
 // Clear Полностью очистит кеш
 func (c *lruCache) Clear() {
 	c.mu.Lock()
-	c.items = make(map[Key]cacheItem)
+	defer c.mu.Unlock()
+
+	c.items = make(map[Key]*listItem)
 	c.queue = NewList()
-	c.mu.Unlock()
+}
+
+func (c *lruCache) unnecessaryRemove() {
+	for c.queue.Len() > c.capacity {
+		i := c.queue.Back()
+		c.queue.Remove(i)
+		delete(c.items, i.Value.(cacheItem).key)
+	}
 }
 
 // NewCache Создаст новый кеш
 func NewCache(capacity int) Cache {
 	return &lruCache{
 		capacity: capacity,
-		items:    make(map[Key]cacheItem),
+		items:    make(map[Key]*listItem),
 		queue:    NewList(),
 	}
 }
