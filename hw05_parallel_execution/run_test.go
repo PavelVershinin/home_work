@@ -30,8 +30,7 @@ func TestRun(t *testing.T) {
 		result := Run(tasks, workersCount, maxErrorsCount)
 
 		require.Equal(t, ErrErrorsLimitExceeded, result)
-		require.LessOrEqual(t,
-			int32(workersCount+maxErrorsCount), runTasksCount, "extra tasks were started")
+		require.LessOrEqual(t, runTasksCount, int32(workersCount+maxErrorsCount), "extra tasks were started")
 	})
 
 	t.Run("tasks without errors", func(t *testing.T) {
@@ -60,7 +59,46 @@ func TestRun(t *testing.T) {
 		elapsedTime := time.Since(start)
 		require.Nil(t, result)
 
-		require.Equal(t, int32(tasksCount), runTasksCount, "not all tasks were completed")
+		require.Equal(t, runTasksCount, int32(tasksCount), "not all tasks were completed")
 		require.LessOrEqual(t, int64(elapsedTime), int64(sumTime/2), "tasks were run sequentially?")
+	})
+
+	t.Run("performing tasks one at a time", func(t *testing.T) {
+		tasksCount := 10
+		tasks := make([]Task, tasksCount)
+		result := make([]int, 0, tasksCount)
+		expected := make([]int, tasksCount)
+
+		for i := 0; i < tasksCount; i++ {
+			n := i
+			expected[i] = n
+			tasks[i] = func() error {
+				result = append(result, n)
+				return nil
+			}
+		}
+
+		require.Equal(t, nil, Run(tasks, 1, 1))
+		require.Equal(t, expected, result)
+	})
+
+	t.Run("N can't be less than one", func(t *testing.T) {
+		require.Equal(t, ErrNCanNotBeLessThanOne, Run([]Task{}, 0, 1))
+	})
+
+	t.Run("what do we do if M less than or equal to zero? 😕", func(t *testing.T) {
+		tasksCount := 10
+		runTasksCount := int32(0)
+		tasks := make([]Task, tasksCount)
+
+		for i := 0; i < tasksCount; i++ {
+			tasks[i] = func() error {
+				atomic.AddInt32(&runTasksCount, 1)
+				return nil
+			}
+		}
+
+		require.Equal(t, ErrErrorsLimitExceeded, Run(tasks, 1, 0))
+		require.Equal(t, int32(0), runTasksCount)
 	})
 }
