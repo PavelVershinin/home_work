@@ -18,9 +18,9 @@ func Run(tasks []Task, N int, M int) error {
 		return ErrNCanNotBeLessThanOne
 	}
 
-	var wait = &sync.WaitGroup{}
-	var limitCh = make(chan struct{}, N)
+	var wait sync.WaitGroup
 	var errCount int32
+	limitCh := make(chan struct{}, N)
 
 	for _, task := range tasks {
 		limitCh <- struct{}{}
@@ -31,11 +31,13 @@ func Run(tasks []Task, N int, M int) error {
 
 		wait.Add(1)
 		go func(t Task) {
+			defer func() {
+				<-limitCh
+				wait.Done()
+			}()
 			if err := t(); err != nil {
 				atomic.AddInt32(&errCount, 1)
 			}
-			<-limitCh
-			wait.Done()
 		}(task)
 	}
 

@@ -83,7 +83,18 @@ func TestRun(t *testing.T) {
 	})
 
 	t.Run("N can't be less than one", func(t *testing.T) {
-		require.Equal(t, ErrNCanNotBeLessThanOne, Run([]Task{}, 0, 1))
+		tasksCount := 10
+		runTasksCount := int32(0)
+		tasks := make([]Task, tasksCount)
+
+		for i := 0; i < tasksCount; i++ {
+			tasks[i] = func() error {
+				atomic.AddInt32(&runTasksCount, 1)
+				return nil
+			}
+		}
+		require.Equal(t, ErrNCanNotBeLessThanOne, Run(tasks, 0, 1))
+		require.Equal(t, int32(0), runTasksCount)
 	})
 
 	t.Run("what do we do if M less than or equal to zero? 😕", func(t *testing.T) {
