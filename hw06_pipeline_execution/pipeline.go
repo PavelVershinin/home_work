@@ -23,7 +23,11 @@ func ExecutePipeline(in In, done In, stages ...Stage) Out {
 				if !ok {
 					return
 				}
-				outCh <- i
+				select {
+				case <-done:
+					return
+				case outCh <- i:
+				}
 			}
 		}
 	}()
