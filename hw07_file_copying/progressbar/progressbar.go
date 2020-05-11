@@ -14,45 +14,46 @@ type Drawer interface {
 	Draw(percent float64, text string) error
 }
 
-type progressBar struct {
+type ProgressBar struct {
 	drawer Drawer
 	min    float64
 	max    float64
 	val    float64
 }
 
-func New() *progressBar {
-	p := &progressBar{}
+func New() *ProgressBar {
+	p := &ProgressBar{}
 
 	return p
 }
 
-func (p *progressBar) Min(n float64) *progressBar {
+func (p *ProgressBar) Min(n float64) *ProgressBar {
 	p.min = n
 	return p
 }
 
-func (p *progressBar) Max(n float64) *progressBar {
+func (p *ProgressBar) Max(n float64) *ProgressBar {
 	p.max = n
 	return p
 }
 
-func (p *progressBar) Val(n float64) *progressBar {
+func (p *ProgressBar) Val(n float64) *ProgressBar {
 	p.val = n
 	return p
 }
 
-func (p *progressBar) Add(n float64) *progressBar {
+func (p *ProgressBar) Add(n float64) *ProgressBar {
 	p.val += n
 	return p
 }
 
-func (p *progressBar) Drawer(drawer Drawer) *progressBar {
+func (p *ProgressBar) Drawer(drawer Drawer) *ProgressBar {
 	p.drawer = drawer
 	return p
 }
 
-func (p *progressBar) Percent() float64 {
+//nolint:gomnd
+func (p *ProgressBar) Percent() float64 {
 	max := p.max - p.min
 	val := p.val - p.min
 	percent := val / (max / 100)
@@ -60,11 +61,11 @@ func (p *progressBar) Percent() float64 {
 	return math.Min(100, percent)
 }
 
-func (p *progressBar) Left() float64 {
+func (p *ProgressBar) Left() float64 {
 	return p.max - p.val
 }
 
-func (p *progressBar) Draw(format string) error {
+func (p *ProgressBar) Draw(format string) error {
 	percent := p.Percent()
 	format = strings.ReplaceAll(format, ":percent", fmt.Sprintf("%.2f", percent))
 	format = strings.ReplaceAll(format, ":left", fmt.Sprintf("%.2f", p.Left()))
@@ -79,7 +80,7 @@ func (p *progressBar) Draw(format string) error {
 	return p.drawer.Draw(percent, format)
 }
 
-func (p *progressBar) Close() error {
+func (p *ProgressBar) Close() error {
 	if p.drawer != nil {
 		return p.drawer.Close()
 	}

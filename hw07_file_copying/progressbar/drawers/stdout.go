@@ -5,9 +5,7 @@ import (
 	"os"
 )
 
-type Stdout struct {
-
-}
+type Stdout struct{}
 
 func (d *Stdout) Draw(percent float64, text string) error {
 	_, err := fmt.Fprintf(os.Stdout, "\r%s", text)
