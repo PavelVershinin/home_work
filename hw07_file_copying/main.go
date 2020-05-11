@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"log"
 )
 
 var (
@@ -18,5 +19,16 @@ func init() {
 
 func main() {
 	flag.Parse()
-	// Place your code here
+
+	if len(from) == 0 {
+		log.Fatalln("-from must contains the path to the source file")
+	}
+
+	if len(to) == 0 {
+		log.Fatalln("-to must contains the path to the destination file")
+	}
+
+	if err := Copy(from, to, offset, limit); err != nil {
+		log.Fatalln(err)
+	}
 }
