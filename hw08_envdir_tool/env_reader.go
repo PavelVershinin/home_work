@@ -7,6 +7,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"unicode"
 )
 
 type Environment map[string]string
@@ -45,7 +46,7 @@ func content(dir string, file os.FileInfo) (string, error) {
 	}
 	b = bytes.Split(b, []byte("\n"))[0]
 	b = bytes.ReplaceAll(b, []byte("\x00"), []byte("\n"))
-	b = bytes.TrimRight(b, `\s`)
+	b = bytes.TrimRightFunc(b, unicode.IsSpace)
 
 	return string(b), nil
 }

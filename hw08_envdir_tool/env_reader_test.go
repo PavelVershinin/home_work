@@ -11,6 +11,7 @@ func TestReadDir(t *testing.T) {
 		var expected = Environment{
 			"BAR":   "bar",
 			"UNSET": "",
+			"EMPTY": "",
 			"FOO":   "   foo\nwith new line",
 			"HELLO": "\"hello\"",
 		}
