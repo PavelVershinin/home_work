@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -15,7 +16,7 @@ type Environment map[string]string
 func ReadDir(dir string) (Environment, error) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("can't read dir: %w", err)
 	}
 
 	env := make(Environment)
@@ -40,10 +41,11 @@ func content(dir string, file os.FileInfo) (string, error) {
 	}
 	b, err := ioutil.ReadFile(filepath.Join(dir, file.Name()))
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("can't read file: %w", err)
 	}
 	b = bytes.Split(b, []byte("\n"))[0]
-	b = bytes.Replace(b, []byte("\x00"), []byte("\n"), -1)
+	b = bytes.ReplaceAll(b, []byte("\x00"), []byte("\n"))
 	b = bytes.TrimRight(b, `\s`)
+
 	return string(b), nil
 }
