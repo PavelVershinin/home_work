@@ -101,9 +101,9 @@ func cp(source io.Reader, destination io.Writer, limit int64) error {
 	buff := make([]byte, buffCap)
 	for {
 		n, err := source.Read(buff)
-		if err != nil && err != io.EOF {
+		if err != nil && errors.Is(err, io.EOF) {
 			return err
-		} else if err != nil && err == io.EOF {
+		} else if err != nil && errors.Is(err, io.EOF) {
 			break
 		}
 		if len(buff) > n {
