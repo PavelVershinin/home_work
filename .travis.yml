@@ -37,7 +37,6 @@ jobs:
       if: |
         (type = push AND branch != hw12_13_14_15_calendar) OR \
         (type = pull_request AND head_branch != hw12_13_14_15_calendar)
-
     - stage: "Tests"
       name: "Linters"
       install: go install github.com/golangci/golangci-lint/cmd/golangci-lint
@@ -45,7 +44,6 @@ jobs:
       if: |
         (type = push AND branch != hw12_13_14_15_calendar) OR \
         (type = pull_request AND head_branch != hw12_13_14_15_calendar)
-
     - stage: "Tests"
       name: "Unit tests"
       install: go mod download
@@ -53,7 +51,6 @@ jobs:
       if: |
         (type = push AND branch != hw12_13_14_15_calendar) OR \
         (type = pull_request AND head_branch != hw12_13_14_15_calendar)
-
     - stage: "Tests"
       name: "Optimization tests"
       install: go mod download
@@ -61,7 +58,6 @@ jobs:
       if: |
         (type = push AND branch == hw10_program_optimization) OR \
         (type = pull_request AND head_branch == hw10_program_optimization)
-
     - stage: "Tests"
       name: "Bash tests"
       install: echo "skip"
@@ -69,7 +65,6 @@ jobs:
       if: |
         (type = push AND branch IN (hw01_hello_otus, hw07_file_copying, hw08_envdir_tool, hw11_telnet_client)) OR \
         (type = pull_request AND head_branch IN (hw01_hello_otus, hw07_file_copying, hw08_envdir_tool, hw11_telnet_client))
-
     - stage: "Tests"
       name: "Makefile"
       install: go mod download
