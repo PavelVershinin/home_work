@@ -1,16 +1,52 @@
 package main
 
-type Environment map[string]EnvValue
+import (
+	"bytes"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
+	"strings"
+	"unicode"
+)
 
-// EnvValue helps to distinguish between empty files and files with the first empty line.
-type EnvValue struct {
-	Value      string
-	NeedRemove bool
-}
+type Environment map[string]string
 
 // ReadDir reads a specified directory and returns map of env variables.
 // Variables represented as files where filename is name of variable, file first line is a value.
 func ReadDir(dir string) (Environment, error) {
-	// Place your code here
-	return nil, nil
+	files, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("can't read dir: %w", err)
+	}
+
+	env := make(Environment)
+
+	for _, file := range files {
+		if file.IsDir() || strings.Contains(file.Name(), "=") {
+			continue
+		}
+		val, err := content(dir, file)
+		if err != nil {
+			return nil, err
+		}
+		env[file.Name()] = val
+	}
+
+	return env, nil
+}
+
+func content(dir string, file os.FileInfo) (string, error) {
+	if file.Size() == 0 {
+		return "", nil
+	}
+	b, err := ioutil.ReadFile(filepath.Join(dir, file.Name()))
+	if err != nil {
+		return "", fmt.Errorf("can't read file: %w", err)
+	}
+	b = bytes.Split(b, []byte("\n"))[0]
+	b = bytes.ReplaceAll(b, []byte("\x00"), []byte("\n"))
+	b = bytes.TrimRightFunc(b, unicode.IsSpace)
+
+	return string(b), nil
 }
