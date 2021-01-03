@@ -1,4 +1,4 @@
-module github.com/PavelWershinin/home_work/hw11_telnet_client
+module github.com/PavelVershinin/home_work/hw11_telnet_client
 
 go 1.15
 
