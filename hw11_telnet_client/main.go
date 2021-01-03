@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"io/ioutil"
 	"log"
 	"net"
@@ -32,38 +33,31 @@ func main() {
 	}
 	defer client.Close()
 
-	log.Printf("Connected to %s\n", hostPort)
+	log.Printf("...Connected to %s\n", hostPort)
 
-	receiveErrorCh := make(chan struct{}, 1)
-	sendErrorCh := make(chan struct{}, 1)
+	errorCh := make(chan error, 1)
 	sigkillCh := make(chan os.Signal, 1)
 	signal.Notify(sigkillCh, syscall.SIGTERM, syscall.SIGINT)
 
-	go func() {
-		for {
-			if err := client.Receive(); err != nil {
-				log.Println(err)
-				receiveErrorCh <- struct{}{}
-				return
-			}
-		}
-	}()
-
-	go func() {
-		for {
-			if err := client.Send(); err != nil {
-				log.Println(err)
-				sendErrorCh <- struct{}{}
-				return
-			}
-		}
-	}()
+	go receive(client, errorCh)
+	go send(client, errorCh)
 
 	select {
-	case <-receiveErrorCh:
-	case <-sendErrorCh:
 	case <-sigkillCh:
+	case err := <-errorCh:
+		log.Println(err)
 	}
+}
 
-	log.Println("\nBye")
+func receive(client TelnetClient, errorCh chan error) {
+	if err := client.Receive(); err != nil {
+		errorCh <- err
+	}
+}
+
+func send(client TelnetClient, errorCh chan error) {
+	if err := client.Send(); err != nil {
+		errorCh <- err
+	}
+	errorCh <- io.EOF
 }

@@ -41,7 +41,7 @@ func (c *Client) Connect() error {
 }
 func (c Client) Send() error {
 	if _, err := io.Copy(c.conn, c.in); err != nil {
-		return fmt.Errorf("can not receive: %w", err)
+		return fmt.Errorf("can not send: %w", err)
 	}
 	return nil
 }
