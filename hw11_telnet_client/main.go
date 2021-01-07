@@ -16,7 +16,7 @@ var timeout time.Duration
 
 func init() {
 	log.SetPrefix("...")
-	log.SetFlags(log.Lshortfile | log.Ltime)
+	log.SetFlags(log.Lmsgprefix)
 	flag.DurationVar(&timeout, "timeout", 10*time.Second, "--timeout=10s")
 }
 
