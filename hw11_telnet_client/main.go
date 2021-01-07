@@ -15,6 +15,7 @@ import (
 var timeout time.Duration
 
 func init() {
+	log.SetPrefix("...")
 	log.SetFlags(log.Lshortfile | log.Ltime)
 	flag.DurationVar(&timeout, "timeout", 10*time.Second, "--timeout=10s")
 }
@@ -26,14 +27,26 @@ func main() {
 		log.Fatal("You must past the host and port")
 	}
 
-	hostPort := net.JoinHostPort(flag.Arg(0), flag.Arg(1))
-	client := NewTelnetClient(hostPort, timeout, ioutil.NopCloser(os.Stdin), os.Stdout)
+	run(
+		net.JoinHostPort(flag.Arg(0), flag.Arg(1)),
+		timeout,
+		ioutil.NopCloser(os.Stdin),
+		os.Stdout,
+	)
+}
+
+func run(address string, timeout time.Duration, in io.ReadCloser, out io.Writer) {
+	client := NewTelnetClient(address, timeout, in, out)
 	if err := client.Connect(); err != nil {
 		log.Fatalf("Connection error: %s", err)
 	}
-	defer client.Close()
+	defer func() {
+		if err := client.Close(); err != nil {
+			log.Println(err)
+		}
+	}()
 
-	log.Printf("...Connected to %s\n", hostPort)
+	log.Printf("Connected to %s\n", address)
 
 	errorCh := make(chan error, 1)
 	sigkillCh := make(chan os.Signal, 1)
