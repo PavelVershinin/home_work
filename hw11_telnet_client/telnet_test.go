@@ -62,4 +62,9 @@ func TestTelnetClient(t *testing.T) {
 
 		wg.Wait()
 	})
+
+	t.Run("close nil connection", func(t *testing.T) {
+		client := NewTelnetClient("", 1, nil, nil)
+		require.EqualError(t, client.Close(), ErrorConnectionIsNil.Error())
+	})
 }
